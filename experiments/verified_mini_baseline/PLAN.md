@@ -1,5 +1,7 @@
 # SWE-bench verified-mini 基线执行计划（50 任务）
 
+> **运维与命令速查见 [`RUNBOOK.md`](RUNBOOK.md)**；本文是早期计划留档，部分细节已过时。
+
 > 状态：**Phase 0–5 全部完成（2026-10-22）。基线 resolved 30/50 = 60%（django 18/25、sphinx 12/25）。**
 > 汇总见 `../runs/baseline_doubao_lite/SUMMARY.md`。关键修正：验证用 swebench 5.0.2 新 harness，数据集须用 `SWE-bench/SWE-bench_Verified`（mini 旧 schema 缺 image 字段）。
 

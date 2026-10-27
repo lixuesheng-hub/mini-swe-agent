@@ -123,7 +123,7 @@ experiments/
   runs/probes/             2 题快速探针（retrieval-prompt、retrieval-tool、hard-case-rerun、models/*）
   runs/_dashboard.md       自动生成的跨 run 对比表
   examples/                3 条代表性轨迹（失败/检索成功/早提交带回回归）
-  verified_mini_baseline/  数据集清单、镜像清单、续跑/判分脚本、工具开关配置
+  verified_mini_baseline/  数据集/镜像清单、续跑与判分脚本、工具开关配置、RUNBOOK（跑实验/判分/发布/排障）
 data/                      数据集本地副本（mini 旧 schema + verified 新 schema）
 tests/                     框架单测 + 本仓库新增功能的测试
 ```
