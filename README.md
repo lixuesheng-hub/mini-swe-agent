@@ -1,217 +1,123 @@
-<div align="center">
-<a href="https://mini-swe-agent.com/latest/"><img src="https://github.com/SWE-agent/mini-swe-agent/raw/main/docs/assets/mini-swe-agent-banner.svg" alt="mini-swe-agent banner" style="height: 7em"/></a>
-</div>
+# mini-swe-agent：SWE Agent 实验与评测平台
 
-# The minimal AI software engineering agent
+> 本仓库以 [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) 为底座，在其上搭建**可复现、可消融的 SWE Agent 实验台**。
+> 上游英文文档见 [`README.upstream.md`](README.upstream.md)；代码结构、风格与提交规范见 [`AGENTS.md`](AGENTS.md)。
 
-📣 [mini-swe-agent now powers Ramp SWE-Bench](https://labs.ramp.com/swebench)<br/>
-📣 [mini-swe-agent beats Claude Code and Codex on DeepSWE](https://deepswe.datacurve.ai/blog#evaluation-harness)<br/>
-📣 [Run mini-swe-agent on our new & extremely challenging benchmark, ProgramBench](https://mini-swe-agent.com/latest/usage/programbench/)<br/>
-📣 [New tutorial on building minimal AI agents](https://minimal-agent.com/)
+---
 
-[![Docs](https://img.shields.io/badge/Docs-green?style=for-the-badge&logo=materialformkdocs&logoColor=white)](https://mini-swe-agent.com/latest/)
-[![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://join.slack.com/t/swe-bench/shared_invite/zt-36pj9bu5s-o3_yXPZbaH2wVnxnss1EkQ)
-[![PyPI - Version](https://img.shields.io/pypi/v/mini-swe-agent?style=for-the-badge&logo=python&logoColor=white&labelColor=black&color=deeppink)](https://pypi.org/project/mini-swe-agent/)
+## 一、背景
 
-> [!WARNING]
-> This is **mini-swe-agent v2**. Read the [migration guide](https://mini-swe-agent.com/latest/advanced/v2_migration/). For the previous version, check out the [v1 branch](https://github.com/SWE-agent/mini-swe-agent/tree/v1).
+**出发点：把 Agent 开发里最容易含糊的环节，变成可度量的实验。**
 
-In 2024, we built [SWE-bench](https://github.com/swe-bench/SWE-bench) & [SWE-agent](https://github.com/swe-agent/swe-agent) and helped kickstart the coding agent revolution.
+Agent 的效果差异常被一句"换个更强的模型"带过，实际混了三件事：**模型能力**（会不会、想不想得到）、
+**脚手架策略**（提示词 / 工具 / 上下文 / 自检）、**评测噪声**（同配置重跑结果不同）。
+不拆开，任何"优化有效"的结论都站不住。
 
-We now ask: **What if our agent was 100x simpler, and still worked nearly as well?**
+本项目以 SWE-bench verified-mini（50 题、约 5 GB 镜像、一轮全量约 1 小时、判分不消耗模型额度）为固定靶场，
+把每项技术**逐项实现、单独消融、用带置信区间的指标判定收益**。定位是**实验与方法学平台**而非产品：
+可插拔的工具注册表、默认关闭的开关、可复现的判分链路，以及能区分"真提升"与"噪声"的评测仪表盘。
 
-`mini` is
+选 SWE-bench 是因为它有客观判分（跑测试，而非人看输出）；选 mini 子集是因为它保留了与全量 verified
+相近的难度分布，却能支撑本地高频迭代。
 
-- **Widely adopted**: Used by Meta, NVIDIA, Essential AI, IBM, Nebius, Anyscale, Princeton University, Stanford University, and many more.
-- **Minimal**: Just some 100 lines of python for the [agent class](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/agents/default.py) (and a bit more for the [environment](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/environments/local.py),
-[model](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/models/litellm_model.py), and [run script](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/run/hello_world.py)) — no fancy dependencies!
-- **Performant:** Scores >74% on the [SWE-bench verified benchmark](https://www.swebench.com/); starts much faster than Claude Code
-- **Deployable:** Supports **local environments**, **docker/podman**, **singularity/apptainer**, **bublewrap**, **contree**, and more
-- **Compatible:** Supports all models via **litellm**, **openrouter**, **portkey**, and more. Support for `/completion` and `/response` endpoints, interleaved thinking etc.
-- Built by the Princeton & Stanford team behind [SWE-bench](https://swebench.com), [SWE-agent](https://swe-agent.com), and more
-- **Tested:** [![Codecov](https://img.shields.io/codecov/c/github/swe-agent/mini-swe-agent?style=flat-square)](https://codecov.io/gh/SWE-agent/mini-swe-agent)
+## 二、当前结论
 
-<details>
+<!-- TLDR:START -->
+基线 **30/50 = 60%**（95% CI 46–72%）；单次结果不足以判定小幅改进。
+- 失败分三类：能力型 / 边界噪声型 / 早提交型（后者无法靠加工具解决）
+- 工具版全量（`github_fetch`）：resolved **36/50 = 72%（+12pp）**，但与基线区间**重叠 58%** → 方向为正、未超噪声
+- 工具被用起来（22/50 实例），但“用过工具”组成功率反而更低（64% vs 79%），是难度混淆而非因果
+<!-- TLDR:END -->
 
-<summary>More motivation (for research)</summary>
+基线 `doubao-seed-2-1-lite-260915` 在 50 题上 **resolved 30/50 = 60%**（Wilson 95% CI 46–72%）。
+这个区间的宽度本身就是结论：**单次 50 题不足以判定小幅改进**，此后所有实验都以"相对基线 + 置信区间"为准。
 
-[SWE-agent](https://swe-agent.com/latest/) jump-started the development of AI agents in 2024. Back then, we placed a lot of emphasis on tools and special interfaces for the agent.
-However, one year later, as LMs have become more capable, a lot of this is not needed at all to build a useful agent!
-In fact, the `mini` agent
+- **失败不是一类事**：能力型（多模型卡在同一测试）、边界噪声型（重跑会翻转，曾出现 100 步失败 → 133 步成功）、早提交型（部分通过但引入回归）。
+- **检索策略是决定性变量**：同题同模型，只加一段"先查 issue/PR 再动手"的提示，`sphinx-8056` 从 100 步失败变为 21 步成功；目前是 n=2 探针，尚未全量验证。
+- **工具不会自动被用**：新增 `github_fetch` 后模型只在一题上自发调用，另一题 0 次 → "给工具" ≠ "会用工具"，需要提示引导。
 
-- **Does not have any tools other than bash** — it doesn't even need to use the tool-calling interface of the LMs.
-  This means that you can run it with literally any model. When running in sandboxed environments you also don't need to take care
-  of installing a single package — all it needs is bash.
-- **Has a completely linear history** — every step of the agent just appends to the messages and that's it.
-  So there's no difference between the trajectory and the messages that you pass on to the LM.
-  Great for debugging & fine-tuning.
-- **Executes actions with `subprocess.run`** — every action is completely independent (as opposed to keeping a stateful shell session running).
-  This makes it trivial to execute the actions in sandboxes (literally just switch out `subprocess.run` with `docker exec`) and to
-  scale up effortlessly. Seriously, this is [a big deal](https://mini-swe-agent.com/latest/faq/#why-no-shell-session), trust me.
+完整方法与数据（指标定义、失败三分类、模型横比、负结果与局限）：**[`experiments/REPORT.md`](experiments/REPORT.md)**；
+跨 run 明细表（含回归数、步数、检索率）：**[`experiments/runs/_dashboard.md`](experiments/runs/_dashboard.md)**；
+可读的样例轨迹（失败 / 检索成功 / 早提交带回归）：**[`experiments/examples/`](experiments/examples/README.md)**。
 
-This makes it perfect as a baseline system and for a system that puts the language model (rather than
-the agent scaffold) in the middle of our attention.
-You can see the result on the [SWE-bench (bash only)](https://www.swebench.com/) leaderboard, that evaluates the performance of different LMs with `mini`.
+### 实验台
 
-</details>
+- **数据**：`MariusHobbhahn/swe-bench-verified-mini`（50 题，django 25 + sphinx 25），本地副本在 `data/`
+- **判分**：官方 harness（`swebench` 5.0.2，docker）配新 schema 数据集取交集，纯本地执行、不消耗模型额度
+- **汇总**：`tools/eval_report.py` 生成跨 run 对比表；每个 run 带 `run_meta.json`（状态）+ `metrics.json`（步数/截断/检索）+ harness 报告
+- **工具扩展**：`EXTRA_TOOLS` 注册表 + `model.extra_tools` 开关，默认空 = 纯 bash（与基线逐字节一致）
 
-<details>
-<summary>More motivation (as a tool)</summary>
+## 三、后续方向
 
-Some agents are overfitted research artifacts. Others are UI-heavy frontend monsters.
+- **稳定性**：工具版 +12pp 压在统计边界上（与基线区间重叠 58%），下一步复跑两次取均值，确认方向是否稳定。
+- **瓶颈转移**：工具解决的是"查资料"，解决不了"急着交卷"——4 个实例共 8 个回归、`sphinx-8269`/`8475`
+  十几步就提交。下一步做**提交前自检 gate**（跑相关测试 + 不许弄坏旧测试才放行），这属于 agent 控制流改动，不是加工具。
 
-The `mini` agent wants to be a hackable tool, not a black box.
+### 工程产出
 
-- **Simple** enough to understand at a glance
-- **Convenient** enough to use in daily workflows
-- **Flexible** to extend
+- **工具注册表**：`EXTRA_TOOLS` + `model.extra_tools` 开关 + 参数校验，默认 bash-only，40 项单测覆盖
+- **评测仪表盘**：Wilson 置信区间、`PASS_TO_PASS` 回归数、检索率、与基线的区间重叠比例，一条命令汇总全部实验
+- **文档一致性**：README 与报告的 TL;DR 块由脚本强制同步，避免数字漂移
+- **发布流水线**：白名单同步、密钥扫描、残留清理，默认不提交
 
-Unlike other agents (including our own [swe-agent](https://swe-agent.com/latest/)), it is radically simpler, because it:
-
-- **Does not have any tools other than bash** — it doesn't even need to use the tool-calling interface of the LMs.
-  Instead of implementing custom tools for every specific thing the agent might want to do, the focus is fully on the LM utilizing the shell to its full potential.
-  Want it to do something specific like opening a PR?
-  Just tell the LM to figure it out rather than spending time to implement it in the agent.
-- **Executes actions with `subprocess.run`** — every action is completely independent (as opposed to keeping a stateful shell session running).
-  This is [a big deal](https://mini-swe-agent.com/latest/faq/#why-no-shell-session) for the stability of the agent, trust me.
-- **Has a completely linear history** — every step of the agent just appends to the messages that are passed to the LM in the next step and that's it.
-  This is great for debugging and understanding what the LM is prompted with.
-
-</details>
-
-<details>
-<summary>Should I use SWE-agent or mini-SWE-agent?</summary>
-
-You should consider `mini-swe-agent` your default choice.
-In particular, you should use `mini-swe-agent` if
-
-- You want a quick command line tool that works locally
-- You want an agent with a very simple control flow
-- You want even faster, simpler & more stable sandboxing & benchmark evaluations
-- You are doing FT or RL and don't want to overfit to a specific agent scaffold
-
-You should use `swe-agent` if
-
-- You want to experiment with different sets of tools, each with their own interface
-- You want to experiment with different history processors
-
-What you get with both
-
-- Excellent performance on SWE-Bench
-- A trajectory browser
-
-</details>
-
-<table>
-<tr>
-<td width="50%">
-<a href="https://mini-swe-agent.com/latest/usage/mini/"><strong>CLI</strong></a> (<code>mini</code>)
-</td>
-<td>
-<a href="https://mini-swe-agent.com/latest/usage/swebench/"><strong>Batch inference</strong></a>
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-![mini](https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/gif/mini.gif?raw=true)
-
-</td>
-<td>
-
-![swebench](https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/gif/swebench.gif?raw=true)
-
-</td>
-</tr>
-<tr>
-<td>
-<a href="https://mini-swe-agent.com/latest/usage/inspector/"><strong>Trajectory browser</strong></a>
-</td>
-<td>
-<a href="https://mini-swe-agent.com/latest/advanced/cookbook/"><strong>Python bindings</strong></a>
-</td>
-</tr>
-<tr>
-<td>
-
-![inspector](https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/gif/inspector.gif?raw=true)
-
-</td>
-<td>
-
-```python
-agent = DefaultAgent(
-    LitellmModel(model_name=...),
-    LocalEnvironment(),
-)
-agent.run("Write a sudoku game")
-```
-
-</td>
-</tr>
-</table>
-
-## Let's get started!
-
-**Option 1:** If you just want to try out the CLI (package installed in anonymous virtual environment)
+## 四、快速上手
 
 ```bash
-pip install uv && uvx mini-swe-agent
-# or
-pip install pipx && pipx ensurepath && pipx run mini-swe-agent
+# 1) 跑一个实例（先确认端到端可用）
+docker ps -a --filter name=minisweagent- -q | xargs -r docker rm -f
+uv run python -m minisweagent.run.benchmarks.swebench_single \
+  --subset data/swe-bench-verified-mini --split test \
+  -i django__django-11790 -m "openai/<模型ID>" -y --exit-immediately
+
+# 2) 批量跑（断点续跑；同一时刻只跑一个批量任务）
+MSWEA_COST_TRACKING=ignore_errors \
+uv run python -m minisweagent.run.benchmarks.swebench \
+  --subset data/swe-bench-verified-mini --split test \
+  -m "openai/<模型ID>" -c swebench.yaml -c agent.mode=yolo \
+  -w 2 -o experiments/runs/<run_name>
+
+# 3) 官方 harness 判分（纯本地，不耗模型额度）
+HTTP_PROXY=<你的代理> uv run python -m swebench.harness.run_evaluation \
+  -d SWE-bench/SWE-bench_Verified -s test \
+  -p experiments/runs/<run_name>/preds.json --max_workers 2 \
+  -id <run_id> --report_dir experiments/runs/<run_name>/report
+
+# 4) 生成跨 run 对比仪表盘
+uv run python tools/eval_report.py
+
+# 5) 单测
+uv run pytest tests/models/test_actions_toolcall.py tests/tools/ -q
 ```
 
-**Option 2:** Install CLI & python bindings in current environment
+### 环境注意（踩过的坑）
 
-```bash
-pip install mini-swe-agent
-mini  # run the CLI
+- **火山方舟 API 走直连**（国内端点），socks 代理会让部分模型报 `Connection error`；
+  而加载 HF 数据集/harness 需要代理 → 常用组合是「unset 代理 + `--subset data/swe-bench-verified-mini` 本地数据」。
+- **同一时刻只跑一个批量任务**：各脚本启动时会全局清理 `minisweagent-*` 容器，两个批量会互相杀。
+- **Coding Plan 有 5 小时滚动配额**，并发建议 `-w 2`；economy 档位在 agent 长上下文负载下会挂死，不建议使用。
+- 判分必须用 **新 schema** 的 `SWE-bench/SWE-bench_Verified`；直接喂 mini 旧 schema 会因缺 `image` 字段失败。
+
+## 五、目录结构
+
+```
+src/minisweagent/          上游框架（本仓库新增：models/utils/actions_toolcall.py 的工具注册表）
+tools/
+  eval_report.py           跨 run 评测仪表盘（resolved + CI + 回归数 + 检索率）
+  publish.sh               发布同步脚本（白名单式、默认不提交）
+experiments/
+  REPORT.md                ★ 入口报告：方法、基线、三个发现、负结果与局限
+  runs/baseline/           全量 50 题基线：NOTES/SUMMARY + preds.json + report/ + metrics.json
+  runs/probes/             2 题快速探针（retrieval-prompt、retrieval-tool、hard-case-rerun、models/*）
+  runs/_dashboard.md       自动生成的跨 run 对比表
+  examples/                3 条代表性轨迹（失败/检索成功/早提交带回回归）
+  verified_mini_baseline/  数据集清单、镜像清单、续跑/判分脚本、工具开关配置
+data/                      数据集本地副本（mini 旧 schema + verified 新 schema）
+tests/                     框架单测 + 本仓库新增功能的测试
 ```
 
-**Option 3:** Install from source (developer setup)
+> 说明：逐实例完整轨迹（约 26 MB）不随仓库发布，仅在本地保留；
+> 发布副本只包含轻量、可读、可复验的产物（报告 + preds + metrics + 3 条样例轨迹）。
 
-```bash
-git clone https://github.com/SWE-agent/mini-swe-agent.git
-cd mini-swe-agent && pip install -e .
-mini  # run the CLI
-```
+## 六、许可
 
-Read more in our [documentation](https://mini-swe-agent.com/latest/):
-
-* [Quick start guide](https://mini-swe-agent.com/latest/quickstart/)
-* [Using the `mini` CLI](https://mini-swe-agent.com/latest/usage/mini/)
-* [Global configuration](https://mini-swe-agent.com/latest/advanced/global_configuration/)
-* [Yaml configuration files](https://mini-swe-agent.com/latest/advanced/yaml_configuration/)
-* [Power up with the cookbook](https://mini-swe-agent.com/latest/advanced/cookbook/)
-* [FAQ](https://mini-swe-agent.com/latest/faq/)
-* [Contribute!](https://mini-swe-agent.com/latest/contributing/)
-
-## Attribution
-
-If you found this work helpful, please consider citing the [SWE-agent paper](https://arxiv.org/abs/2405.15793) in your work:
-
-```bibtex
-@inproceedings{yang2024sweagent,
-  title={{SWE}-agent: Agent-Computer Interfaces Enable Automated Software Engineering},
-  author={John Yang and Carlos E Jimenez and Alexander Wettig and Kilian Lieret and Shunyu Yao and Karthik R Narasimhan and Ofir Press},
-  booktitle={The Thirty-eighth Annual Conference on Neural Information Processing Systems},
-  year={2024},
-  url={https://arxiv.org/abs/2405.15793}
-}
-```
-
-Our other projects:
-
-<div align="center">
-  <a href="https://github.com/SWE-agent/SWE-agent"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/sweagent_logo_text_below.svg" alt="SWE-agent" height="120px"></a>
-   &nbsp;&nbsp;
-  <a href="https://github.com/SWE-agent/SWE-ReX"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/swerex_logo_text_below.svg" alt="SWE-ReX" height="120px"></a>
-   &nbsp;&nbsp;
-  <a href="https://github.com/SWE-bench/SWE-bench"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/swebench_logo_text_below.svg" alt="SWE-bench" height="120px"></a>
-  &nbsp;&nbsp;
-  <a href="https://github.com/SWE-bench/SWE-smith"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/swesmith_logo_text_below.svg" alt="SWE-smith" height="120px"></a>
-  &nbsp;&nbsp;
-  <a href="https://github.com/codeclash-ai/codeclash"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/codeclash_logo_text_below.svg" alt="CodeClash" height="120px"></a>
-  &nbsp;&nbsp;
-  <a href="https://github.com/SWE-bench/sb-cli"><img src="https://raw.githubusercontent.com/SWE-agent/swe-agent-media/refs/heads/main/media/logos_banners/sbcli_logo_text_below.svg" alt="sb-cli" height="120px"></a>
-</div>
+沿用上游 [LICENSE.md](LICENSE.md)。

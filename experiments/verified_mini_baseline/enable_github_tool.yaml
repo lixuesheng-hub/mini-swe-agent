@@ -1,0 +1,3 @@
+model:
+  extra_tools:
+    - github_fetch

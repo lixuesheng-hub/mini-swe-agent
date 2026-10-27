@@ -5,7 +5,9 @@ import pytest
 from minisweagent.exceptions import FormatError
 from minisweagent.models.utils.actions_toolcall import (
     BASH_TOOL,
+    EXTRA_TOOLS,
     format_toolcall_observation_messages,
+    get_enabled_tools,
     parse_toolcall_actions,
 )
 
@@ -141,3 +143,96 @@ class TestBashTool:
         assert BASH_TOOL["function"]["name"] == "bash"
         assert "command" in BASH_TOOL["function"]["parameters"]["properties"]
         assert "command" in BASH_TOOL["function"]["parameters"]["required"]
+
+
+class TestToolRegistry:
+    def test_default_is_bash_only(self):
+        assert get_enabled_tools([]) == [BASH_TOOL]
+        assert get_enabled_tools(None) == [BASH_TOOL]
+
+    def test_extra_tool_registered_after_bash(self):
+        tools = get_enabled_tools(["github_fetch"])
+        assert tools[0] == BASH_TOOL
+        assert tools[1]["function"]["name"] == "github_fetch"
+        assert "github_fetch" in EXTRA_TOOLS
+
+    def test_unknown_extra_tool_raises(self):
+        with pytest.raises(ValueError, match="Unknown extra tool"):
+            get_enabled_tools(["does_not_exist"])
+
+    def test_extra_tool_rejected_when_not_enabled(self):
+        tool_call = MagicMock()
+        tool_call.function.name = "github_fetch"
+        tool_call.function.arguments = '{"repo": "a/b", "resource": "pull", "number": 1}'
+        tool_call.id = "call_1"
+        with pytest.raises(FormatError) as exc_info:
+            parse_toolcall_actions([tool_call], format_error_template="{{ error }}")
+        assert "Unknown tool 'github_fetch'" in exc_info.value.messages[0]["content"]
+
+    @pytest.mark.parametrize(
+        ("resource", "expected_path"),
+        [
+            ("issue_comments", "issues/7/comments"),
+            ("issue_timeline", "issues/7/timeline"),
+            ("pull", "pulls/7"),
+            ("pull_files", "pulls/7/files"),
+        ],
+    )
+    def test_enabled_github_fetch_translates_to_curl(self, resource, expected_path):
+        tool_call = MagicMock()
+        tool_call.function.name = "github_fetch"
+        tool_call.function.arguments = (
+            '{"repo": "sphinx-doc/sphinx", "resource": "%s", "number": 7}' % resource
+        )
+        tool_call.id = "call_9"
+        actions = parse_toolcall_actions(
+            [tool_call],
+            format_error_template="{{ error }}",
+            extra_tool_names=["github_fetch"],
+        )
+        assert len(actions) == 1
+        assert actions[0]["tool_call_id"] == "call_9"
+        command = actions[0]["command"]
+        assert command.startswith("curl -sL --max-time 20")
+        assert "https://api.github.com/repos/sphinx-doc/sphinx/" in command
+        assert expected_path in command
+        assert command.endswith("| head -c 12000")
+
+    @pytest.mark.parametrize("arguments", [
+        '{"repo": "no-slash", "resource": "pull", "number": 1}',
+        '{"repo": "a/b", "resource": "bogus", "number": 1}',
+        '{"repo": "a/b", "resource": "pull", "number": "not-an-int"}',
+        '{"resource": "pull", "number": 1}',
+    ])
+    def test_invalid_github_fetch_arguments_raise_format_error(self, arguments):
+        tool_call = MagicMock()
+        tool_call.function.name = "github_fetch"
+        tool_call.function.arguments = arguments
+        tool_call.id = "call_1"
+        with pytest.raises(FormatError) as exc_info:
+            parse_toolcall_actions(
+                [tool_call],
+                format_error_template="{{ error }}",
+                extra_tool_names=["github_fetch"],
+            )
+        assert "github_fetch" in exc_info.value.messages[0]["content"]
+
+    def test_mixed_bash_and_extra_tools(self):
+        calls = []
+        for i, (name, args) in enumerate([
+            ("bash", '{"command": "ls"}'),
+            ("github_fetch", '{"repo": "a/b", "resource": "pull", "number": 3}'),
+        ]):
+            tc = MagicMock()
+            tc.function.name = name
+            tc.function.arguments = args
+            tc.id = f"call_{i}"
+            calls.append(tc)
+        actions = parse_toolcall_actions(
+            calls,
+            format_error_template="{{ error }}",
+            extra_tool_names=["github_fetch"],
+        )
+        assert actions[0] == {"command": "ls", "tool_call_id": "call_0"}
+        assert "pulls/3" in actions[1]["command"]
+        assert actions[1]["tool_call_id"] == "call_1"

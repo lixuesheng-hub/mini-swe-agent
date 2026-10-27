@@ -1,0 +1,15 @@
+{
+ "status": "confirmed",
+ "model": "openai/doubao-seed-2-1-lite-260915",
+ "instances": 50,
+ "variable": "原版提示词 + 注册 github_fetch 工具（无提示引导）",
+ "report_ref": "§5 实验记录",
+ "started": "2026-10-26",
+ "started_at": "2026-10-26T20:36:51+08:00",
+ "result": {
+  "resolved": 36,
+  "total": 50,
+  "vs_baseline": "+12pp",
+  "overlap": "58% 明显重叠"
+ }
+}

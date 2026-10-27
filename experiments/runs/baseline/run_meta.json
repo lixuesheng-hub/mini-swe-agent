@@ -1,0 +1,8 @@
+{
+ "status": "confirmed",
+ "model": "openai/doubao-seed-2-1-lite-260915",
+ "instances": 50,
+ "variable": "无（基线：默认配置）",
+ "report_ref": "§2 基线",
+ "started": "2026-10-22"
+}

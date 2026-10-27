@@ -1,0 +1,8 @@
+{
+ "status": "confirmed",
+ "model": "openai/doubao-seed-2-1-lite-260915",
+ "instances": 2,
+ "variable": "新增 github_fetch 工具（无提示）",
+ "report_ref": "§3.3 检索策略",
+ "started": "2026-10-22"
+}

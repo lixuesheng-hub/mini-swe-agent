@@ -186,3 +186,11 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+/.venv_windows/
+/.venv_linux/
+
+# --- publish override (tools/publish.sh) ---
+# IDE 配置（.gitignore 覆盖块里统一忽略）
+.idea/
+.vscode/
+!experiments/examples/**

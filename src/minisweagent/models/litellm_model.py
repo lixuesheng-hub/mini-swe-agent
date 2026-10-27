@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from minisweagent.exceptions import FormatError
 from minisweagent.models import GLOBAL_MODEL_STATS
 from minisweagent.models.utils.actions_toolcall import (
-    BASH_TOOL,
+    get_enabled_tools,
     format_toolcall_observation_messages,
     parse_toolcall_actions,
 )
@@ -44,6 +44,8 @@ class LitellmModelConfig(BaseModel):
     """Template used to render the observation after executing an action."""
     multimodal_regex: str = ""
     """Regex to extract multimodal content. Empty string disables multimodal processing."""
+    extra_tools: list[str] = []
+    """Names of optional tools to enable next to bash. Empty (default) = bash only, identical to baseline."""
 
 
 class LitellmModel:
@@ -66,7 +68,7 @@ class LitellmModel:
             return litellm.completion(
                 model=self.config.model_name,
                 messages=messages,
-                tools=[BASH_TOOL],
+                tools=get_enabled_tools(self.config.extra_tools),
                 **(self.config.model_kwargs | kwargs),
             )
         except litellm.exceptions.AuthenticationError as e:
@@ -132,6 +134,7 @@ class LitellmModel:
             tool_calls,
             format_error_template=self.config.format_error_template,
             template_kwargs={"finish_reason": response.choices[0].finish_reason},
+            extra_tool_names=self.config.extra_tools,
         )
 
     def format_message(self, **kwargs) -> dict:

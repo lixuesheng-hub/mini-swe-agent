@@ -1,0 +1,8 @@
+{
+ "status": "confirmed",
+ "model": "openai/doubao-seed-2-1-lite-260915",
+ "instances": 2,
+ "variable": "同配置重跑两个最难实例（测随机性）",
+ "report_ref": "§3.1 随机翻转",
+ "started": "2026-10-22"
+}

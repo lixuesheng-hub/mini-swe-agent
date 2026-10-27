@@ -1,0 +1,8 @@
+{
+ "status": "confirmed",
+ "model": "openai/deepseek-v4-1-flash",
+ "instances": 2,
+ "variable": "换模型（同框架同题）",
+ "report_ref": "§3.3 模型横比",
+ "started": "2026-10-22"
+}

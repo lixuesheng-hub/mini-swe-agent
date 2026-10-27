@@ -1,0 +1,16 @@
+{
+ "steps": [
+  21,
+  31
+ ],
+ "trunc_events": 6,
+ "repeat_cmds": 0,
+ "retrieved_ids": [
+  "sphinx-doc__sphinx-8056",
+  "sphinx-doc__sphinx-8638"
+ ],
+ "instances_with_traj": 2,
+ "started_at": "2026-10-22T18:41:46",
+ "agent_finished_at": "2026-10-22T18:44:20",
+ "evaluated_at": "2026-10-22T18:54:57"
+}
