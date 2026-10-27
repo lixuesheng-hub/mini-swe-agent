@@ -1,5 +1,10 @@
 # mini-swe-agent：SWE Agent 实验与评测平台
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Tests](https://img.shields.io/badge/new--feature%20tests-40%20passed-brightgreen)
+![Benchmark](https://img.shields.io/badge/benchmark-SWE--bench%20verified--mini%20(50)-informational)
+
 > 本仓库以 [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) 为底座，在其上搭建**可复现、可消融的 SWE Agent 实验台**。
 > 上游英文文档见 [`README.upstream.md`](README.upstream.md)；代码结构、风格与提交规范见 [`AGENTS.md`](AGENTS.md)。
 
@@ -32,9 +37,17 @@ Agent 的效果差异常被一句"换个更强的模型"带过，实际混了三
 基线 `doubao-seed-2-1-lite-260915` 在 50 题上 **resolved 30/50 = 60%**（Wilson 95% CI 46–72%）。
 这个区间的宽度本身就是结论：**单次 50 题不足以判定小幅改进**，此后所有实验都以"相对基线 + 置信区间"为准。
 
-- **失败不是一类事**：能力型（多模型卡在同一测试）、边界噪声型（重跑会翻转，曾出现 100 步失败 → 133 步成功）、早提交型（部分通过但引入回归）。
-- **检索策略是决定性变量**：同题同模型，只加一段"先查 issue/PR 再动手"的提示，`sphinx-8056` 从 100 步失败变为 21 步成功；目前是 n=2 探针，尚未全量验证。
-- **工具不会自动被用**：新增 `github_fetch` 后模型只在一题上自发调用，另一题 0 次 → "给工具" ≠ "会用工具"，需要提示引导。
+- **失败不是一类事**：能力型（多模型卡在同一测试）、边界噪声型（重跑会翻转：100 步失败 → 133 步成功）、早提交型（部分通过却引入多个回归）。
+- **检索提高触发率，但不必然提分**：加 `github_fetch` 后全量 50 题 36/50（+12pp），检索实例从 4/50 升到 22/50，但与基线区间重叠 58%，未超噪声。
+- **提示引导比单纯给工具更容易触发**：n=2 探针上，一段"先查 issue/PR"的提示让 `sphinx-8056` 从 100 步失败变为 21 步成功；同一题只给工具、无提示时另一题 0 次调用。
+
+| run | 配置 | resolved | 95% CI | 与基线区间重叠 |
+|---|---|---:|---|---|
+| `runs/baseline` | 默认（bash only） | 30/50 = 60% | [46%, 72%] | —（基线） |
+| `runs/retrieval-tool-50` | + `github_fetch` 工具 | **36/50 = 72%** | [58%, 83%] | **58% 明显重叠 → 未超噪声** |
+
+> 另有 7 个 2 题探针（4 个模型、prompt 版、工具版、难例重跑）；完整表格由 `tools/eval_report.py` 生成，
+> 见 [`_dashboard.md`](experiments/runs/_dashboard.md)。
 
 完整方法与数据（指标定义、失败三分类、模型横比、负结果与局限）：**[`experiments/REPORT.md`](experiments/REPORT.md)**；
 跨 run 明细表（含回归数、步数、检索率）：**[`experiments/runs/_dashboard.md`](experiments/runs/_dashboard.md)**；
