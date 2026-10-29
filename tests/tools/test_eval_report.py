@@ -240,3 +240,36 @@ def test_metrics_records_timestamps(tmp_path):
     assert m["started_at"] == "2026-10-22T10:00:00"
     assert m["agent_finished_at"] == "2026-10-22T11:30:00"
     assert m["evaluated_at"] is not None
+
+
+def test_run_meta_instances_lowers_denominator_for_missing_instances(workspace):
+    """A hung/lost instance never reaches preds.json, so harness cannot report it.
+    run_meta.instances states the planned task count; missing ones are failures."""
+    (workspace / "runs" / "base" / "run_meta.json").write_text(
+        json.dumps({"status": "confirmed", "instances": 5})
+    )
+    runs = er.main(
+        runs_dir=workspace / "runs", eval_logs=workspace / "logs",
+        out_md=workspace / "dash.md", out_csv=workspace / "dash.csv", quiet=True,
+    )
+    # 2 resolved of planned 5 (3 evaluated + 2 lost)
+    assert (runs[0].resolved, runs[0].evaluated) == (2, 5)
+    assert "2/5" in (workspace / "dash.md").read_text()
+
+
+def test_same_denominator_compares_even_if_one_run_lost_an_instance(tmp_path):
+    """A lost instance shrinks evaluated_ids but the planned task set is identical."""
+    _make_run(tmp_path, "base", model_dir="m", run_id="base",
+              resolved=["django__django-1", "sphinx-doc__sphinx-2"],
+              unresolved=["django__django-3"], trajs={})
+    _make_run(tmp_path, "gated", model_dir="m", run_id="gated",
+              resolved=["django__django-1", "sphinx-doc__sphinx-2", "django__django-3"],
+              unresolved=[], trajs={})
+    (tmp_path / "runs" / "gated" / "run_meta.json").write_text(
+        json.dumps({"status": "exploratory", "instances": 3})
+    )
+    er.main(runs_dir=tmp_path / "runs", eval_logs=tmp_path / "logs",
+            out_md=tmp_path / "d.md", out_csv=tmp_path / "d.csv", quiet=True)
+    md = (tmp_path / "d.md").read_text()
+    gated_row = next(l for l in md.splitlines() if l.startswith("| gated |"))
+    assert "任务集不同" not in gated_row and "重叠" in gated_row

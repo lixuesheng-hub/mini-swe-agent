@@ -182,12 +182,16 @@ def summarize_run(run_dir: Path, name: str | None = None) -> RunSummary | None:
     s = RunSummary(name=name or run_dir.name)
     s.model = model_dir.replace("__", "/")
     s.resolved = data.get("resolved_instances", 0)
-    s.evaluated = data.get("completed_instances", 0)
+    s.evaluated = data.get("completed_instances", 0) + len(data.get("empty_patch_ids", []))
     s.infra_failure = len(data.get("infra_failure_ids", []))
     s.empty_patch = len(data.get("empty_patch_ids", []))
     s.error = len(data.get("error_ids", []))
     s.resolved_ids = set(data.get("resolved_ids", []))
-    s.evaluated_ids = set(data.get("completed_ids", s.resolved_ids | set(data.get("unresolved_ids", []))))
+    # Empty-patch instances (e.g. LimitsExceeded) are not evaluated by harness but are
+    # experimental failures: count them in the denominator so runs share a 50-task basis.
+    empty_ids = set(data.get("empty_patch_ids", []))
+    completed_ids = set(data.get("completed_ids", s.resolved_ids | set(data.get("unresolved_ids", []))))
+    s.evaluated_ids = completed_ids | empty_ids
 
     # per-instance detail from raw harness logs
     for iid in sorted(s.evaluated_ids):
@@ -257,6 +261,9 @@ def summarize_run(run_dir: Path, name: str | None = None) -> RunSummary | None:
         meta = _load(meta_path)
         s.status = meta.get("status", "unknown")
         s.variable = meta.get("variable", "")
+        # Instances that never reached preds.json (hung container, killed batch) are
+        # not reported by harness at all. The planned count is the honest denominator.
+        s.evaluated = max(s.evaluated, int(meta.get("instances", 0) or 0))
     return s
 
 
@@ -343,8 +350,9 @@ def main(runs_dir: Path = RUNS_DIR, eval_logs: Path = EVAL_LOGS, out_md: Path = 
         dj, sp = splits[s.name]
         if s is baseline:
             vs_base = "—（基线）"
-        elif s.evaluated_ids != baseline.evaluated_ids:
-            # 任务集不同（如 n=2 探针）时，区间不可比
+        elif s.evaluated != baseline.evaluated:
+            # 任务集不同（如 n=2 探针）时，区间不可比。用计划题目数判等：
+            # 同一批题因卡死/漏跑而少一两个实例仍视为可比。
             vs_base = "—（任务集不同）"
         else:
             r = _overlap_ratio((lo, hi), base_ci)

@@ -18,10 +18,11 @@ from rich.live import Live
 
 from minisweagent import Environment
 from minisweagent.config import builtin_config_dir, get_config_from_spec
+from minisweagent.agents import get_agent_class
 from minisweagent.environments import get_environment
 from minisweagent.models import get_model
 from minisweagent.run.benchmarks.utils.batch_progress import RunBatchProgressManager
-from minisweagent.run.benchmarks.utils.common import ProgressTrackingAgent
+from minisweagent.run.benchmarks.utils.common import make_progress_tracking_agent
 from minisweagent.utils.log import add_file_handler, logger
 from minisweagent.utils.serialize import UNSET, recursive_merge
 
@@ -80,9 +81,20 @@ def get_sb_environment(config: dict, instance: dict) -> Environment:
     env_config = {**config.get("environment", {})}
     env_config["environment_class"] = env_config.get("environment_class", "docker")
     image_name = get_swebench_docker_image_name(instance)
-    if env_config["environment_class"] in ["docker", "swerex_modal"]:
+    env_class_name = env_config["environment_class"]
+    docker_like = env_class_name in ["docker", "swerex_modal"]
+    singularity_like = env_class_name in ["singularity", "contree"]
+    # Custom environments given as dotted paths: infer image handling from their base class.
+    if "." in env_class_name:
+        from minisweagent.environments import get_environment_class
+        from minisweagent.environments.docker import DockerEnvironment
+        from minisweagent.environments.singularity import SingularityEnvironment
+        cls = get_environment_class(env_class_name)
+        docker_like = issubclass(cls, DockerEnvironment)
+        singularity_like = issubclass(cls, SingularityEnvironment)
+    if docker_like:
         env_config["image"] = image_name
-    elif env_config["environment_class"] in ["singularity", "contree"]:
+    elif singularity_like:
         env_config["image"] = "docker://" + image_name
 
     env = get_environment(env_config)
@@ -144,12 +156,15 @@ def process_instance(
 
     try:
         env = get_sb_environment(config, instance)
-        agent = ProgressTrackingAgent(
+        agent_cfg = dict(config.get("agent", {}))
+        base_agent_class = get_agent_class(agent_cfg.pop("agent_class", "default"))
+        tracking_agent_cls = make_progress_tracking_agent(base_agent_class)
+        agent = tracking_agent_cls(
             model,
             env,
             progress_manager=progress_manager,
             instance_id=instance_id,
-            **config.get("agent", {}),
+            **agent_cfg,
         )
         info = agent.run(task)
         exit_status = info.get("exit_status")

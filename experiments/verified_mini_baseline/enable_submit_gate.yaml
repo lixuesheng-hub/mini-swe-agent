@@ -1,0 +1,12 @@
+# 提交前自检 gate（T2）：在 webhint 提示词之上叠加，也可叠加到其他配置。
+# 唯一行为改动：模型发出提交命令时，先在临时 git worktree 里验证
+# （patch 可 apply / py_compile / 重跑模型自己跑过的测试），失败打回继续修。
+# 默认配置不含本文件时与基线逐字节一致（D04）。
+agent:
+  agent_class: minisweagent.agents.extra.gated_agent.GatedAgent
+
+environment:
+  environment_class: minisweagent.environments.extra.gated_docker.GatedDockerEnvironment
+  submit_gate_enabled: true
+  submit_gate_max_attempts: 3
+  submit_gate_timeout: 900
