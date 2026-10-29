@@ -1,0 +1,10 @@
+{
+  "status": "confirmed",
+  "model": "openai/doubao-seed-2-1-lite-260915",
+  "instances": 50,
+  "variable": "webhint 提示词 + submit gate（干净 worktree 应用补丁并重跑模型自己跑过的测试，失败打回≤3次）",
+  "report_ref": "experiments/REPORT.md §3.7",
+  "started": "2026-10-28",
+  "confirmed_at": "2026-10-29",
+  "notes": "sphinx-9461 容器挂死 8h 被手动终止，按 50 题口径计失败"
+}

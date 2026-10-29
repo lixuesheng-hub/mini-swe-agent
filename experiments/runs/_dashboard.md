@@ -11,6 +11,10 @@
 | probes/retrieval-prompt | confirmed | openai/doubao-seed-2-1-lite-260915 | 2/2 | 100% | [34%, 100%] | —（任务集不同） | 0 | 2 | 58/58 | 0(0) | 0 | 0 | 2 | 0/0/0 |
 | probes/retrieval-tool | confirmed | openai/doubao-seed-2-1-lite-260915 | 1/2 | 50% | [9%, 91%] | —（任务集不同） | 0 | 1 | 76/76 | 0(0) | 0 | 4 | 1 | 0/0/0 |
 | retrieval-tool-50 | confirmed | openai/doubao-seed-2-1-lite-260915 | 36/50 | 72% | [58%, 83%] | 58% 明显重叠 | 20 | 16 | 32/46 | 4(8) | 34 | 23 | 22 | 0/0/0 |
+| retrieval-prompt-50 | confirmed | openai/doubao-seed-2-1-lite-260915 | 41/50 | 82% | [69%, 90%] | 15% 边缘 | 22 | 19 | 28/37 | 5(9) | 16 | 230 | 45 | 0/1/0 |
+| retrieval-prompt-50__rep2 | confirmed | openai/doubao-seed-2-1-lite-260915 | 42/50 | 84% | [71%, 92%] | 4% 边缘 | 23 | 19 | 29/45 | 3(7) | 16 | 9 | 49 | 0/1/0 |
+| gate-smoke | confirmed | openai/doubao-seed-2-1-lite-260915 | 2/4 | 50% | [15%, 85%] | —（任务集不同） | 0 | 2 | 42/42 | 2(6) | 2 | 9 | 4 | 0/0/0 |
+| gate-webhint-50 | confirmed | openai/doubao-seed-2-1-lite-260915 | 44/50 | 88% | [76%, 94%] | 0% 不重叠(显著) | 24 | 20 | 34/44 | 4(8) | 15 | 46 | 48 | 0/0/0 |
 
 ## 说明（中文）
 
@@ -20,4 +24,8 @@
 - 回归数 = 新弄坏的 PASS_TO_PASS 旧测试数；检索 = 轨迹中出现网络请求的实例数；截断 = 观察超 10k 字符被裁剪的次数。
 
 - **baseline**: F2P partially passing but unresolved: django__django-11885, django__django-12406, sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475
+- **gate-smoke**: F2P partially passing but unresolved: sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475
+- **gate-webhint-50**: F2P partially passing but unresolved: sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475
+- **retrieval-prompt-50**: F2P partially passing but unresolved: django__django-11815, django__django-12406, sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475
+- **retrieval-prompt-50__rep2**: F2P partially passing but unresolved: sphinx-doc__sphinx-10435, sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475
 - **retrieval-tool-50**: F2P partially passing but unresolved: django__django-12406, sphinx-doc__sphinx-10435, sphinx-doc__sphinx-8269, sphinx-doc__sphinx-8475

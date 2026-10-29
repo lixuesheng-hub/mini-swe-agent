@@ -1,0 +1,9 @@
+{
+  "status": "confirmed",
+  "model": "openai/doubao-seed-2-1-lite-260915",
+  "instances": 4,
+  "variable": "submit gate 小样本冒烟（8269/8475 目标案例 + 8056/8638 误伤对照）",
+  "report_ref": "experiments/REPORT.md §3.7",
+  "started": "2026-10-28",
+  "confirmed_at": "2026-10-29"
+}

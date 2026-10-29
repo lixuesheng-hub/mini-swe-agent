@@ -1,0 +1,9 @@
+{
+  "status": "confirmed",
+  "model": "openai/doubao-seed-2-1-lite-260915",
+  "instances": 50,
+  "variable": "rep2：与 retrieval-prompt-50 同配置（webhint 提示词，无工具），估计 run 间方差",
+  "report_ref": "experiments/REPORT.md §3.5",
+  "started": "2026-10-28",
+  "confirmed_at": "2026-10-28"
+}

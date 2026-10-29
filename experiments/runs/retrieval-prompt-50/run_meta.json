@@ -1,0 +1,9 @@
+{
+  "status": "confirmed",
+  "model": "openai/doubao-seed-2-1-lite-260915",
+  "instances": 50,
+  "variable": "prompt 增加\"先查上游 issue/PR\"提示（webhint），无 extra_tools，纯 bash",
+  "report_ref": "experiments/REPORT.md §3.5",
+  "started": "2026-10-27",
+  "confirmed_at": "2026-10-27"
+}
